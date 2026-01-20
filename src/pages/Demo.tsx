@@ -1,35 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, CheckCircle, AlertCircle } from 'lucide-react'
-import Button from '../components/ui/Button'
+import { Calendar } from 'lucide-react'
+import { useTurnstile } from '../hooks/useTurnstile'
 
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || ''
-
-interface FormData {
-  first_name: string
-  last_name: string
-  email: string
-  phone: string
-  company: string
-  role: string
-  monthly_claims: string
-  preferred_time: string
-  message: string
-  consent: boolean
-}
-
-interface ValidationErrors {
-  first_name?: string
-  last_name?: string
-  email?: string
-  phone?: string
-  company?: string
-  role?: string
-  monthly_claims?: string
-  preferred_time?: string
-  message?: string
-  consent?: string
-}
+type FormStatus = 'idle' | 'submitting' | 'success' | 'error'
 
 const monthlyClaimsOptions = [
   'Less than 1,000',
@@ -77,162 +51,37 @@ function CalendlyWidget() {
 }
 
 function ScheduleDemoForm() {
-  const [formData, setFormData] = useState<FormData>({
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    company: '',
-    role: '',
-    monthly_claims: '',
-    preferred_time: '',
-    message: '',
-    consent: false,
-  })
+  const [status, setStatus] = useState<FormStatus>('idle')
+  const [errorMessage, setErrorMessage] = useState('')
+  const { token: turnstileToken, containerRef: turnstileRef, reset: resetTurnstile } = useTurnstile()
 
-  const [errors, setErrors] = useState<ValidationErrors>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitStatus, setSubmitStatus] = useState<null | 'success' | 'error'>(null)
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
-  const turnstileRef = useRef<HTMLDivElement>(null)
-  const widgetIdRef = useRef<string | null>(null)
-
-  // Initialize Turnstile
-  useEffect(() => {
-    if (!turnstileRef.current || !TURNSTILE_SITE_KEY) return
-    if (widgetIdRef.current) return // Already initialized
-
-    const initTurnstile = () => {
-      if (window.turnstile && turnstileRef.current) {
-        widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
-          sitekey: TURNSTILE_SITE_KEY,
-          callback: (token: string) => setTurnstileToken(token),
-          'expired-callback': () => setTurnstileToken(null),
-        })
-      }
-    }
-
-    if (window.turnstile) {
-      initTurnstile()
-    } else {
-      const interval = setInterval(() => {
-        if (window.turnstile) {
-          clearInterval(interval)
-          initTurnstile()
-        }
-      }, 100)
-      return () => clearInterval(interval)
-    }
-
-    return () => {
-      if (widgetIdRef.current) {
-        window.turnstile?.remove(widgetIdRef.current)
-        widgetIdRef.current = null
-      }
-    }
-  }, [])
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const { name, value, type } = e.target as HTMLInputElement
-    const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: val,
-    }))
-
-    if (errors[name as keyof ValidationErrors]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: undefined,
-      }))
-    }
-  }
-
-  const validateForm = (): boolean => {
-    const newErrors: ValidationErrors = {}
-    let isValid = true
-
-    if (!formData.first_name.trim()) {
-      newErrors.first_name = 'First name is required'
-      isValid = false
-    }
-
-    if (!formData.last_name.trim()) {
-      newErrors.last_name = 'Last name is required'
-      isValid = false
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required'
-      isValid = false
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address'
-      isValid = false
-    }
-
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required for demo scheduling'
-      isValid = false
-    } else if (!/^[\d+\-() ]{7,15}$/.test(formData.phone)) {
-      newErrors.phone = 'Please enter a valid phone number'
-      isValid = false
-    }
-
-    if (!formData.company.trim()) {
-      newErrors.company = 'Company name is required'
-      isValid = false
-    }
-
-    if (!formData.monthly_claims) {
-      newErrors.monthly_claims = 'Please select your monthly claims volume'
-      isValid = false
-    }
-
-    if (!formData.preferred_time) {
-      newErrors.preferred_time = 'Please select your preferred demo time'
-      isValid = false
-    }
-
-    if (!formData.consent) {
-      newErrors.consent = 'You must agree to the privacy policy'
-      isValid = false
-    }
-
-    setErrors(newErrors)
-    return isValid
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    const form = e.currentTarget
+    const formData = new FormData(form)
 
-    if (!validateForm()) {
-      return
-    }
+    // Honeypot check
+    if (formData.get('website_hp')) return
 
     if (!turnstileToken) {
-      setSubmitStatus('error')
+      setErrorMessage('Please complete the verification')
+      setStatus('error')
       return
     }
 
-    setIsSubmitting(true)
-    setSubmitStatus(null)
+    setStatus('submitting')
+    setErrorMessage('')
 
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: `${formData.first_name} ${formData.last_name}`,
-          email: formData.email,
-          phone: formData.phone,
-          company: formData.company,
-          message: `Demo Request\n\nRole: ${formData.role || 'Not specified'}\nMonthly Claims: ${formData.monthly_claims}\nPreferred Time: ${formData.preferred_time}\n\nAdditional Info:\n${formData.message || 'None'}`,
+          name: `${formData.get('first_name')} ${formData.get('last_name')}`,
+          email: formData.get('email'),
+          phone: formData.get('phone') || '',
+          company: formData.get('company') || '',
+          message: `Demo Request\n\nRole: ${formData.get('role') || 'Not specified'}\nMonthly Claims: ${formData.get('monthly_claims')}\nPreferred Time: ${formData.get('preferred_time')}\n\nAdditional Info:\n${formData.get('message') || 'None'}`,
           'cf-turnstile-response': turnstileToken,
         }),
       })
@@ -242,267 +91,222 @@ function ScheduleDemoForm() {
         throw new Error(data.error || 'Failed to submit')
       }
 
-      setSubmitStatus('success')
-      setFormData({
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: '',
-        company: '',
-        role: '',
-        monthly_claims: '',
-        preferred_time: '',
-        message: '',
-        consent: false,
-      })
-      // Reset Turnstile
-      if (widgetIdRef.current) {
-        window.turnstile?.reset(widgetIdRef.current)
-      }
-      setTurnstileToken(null)
-
-      setTimeout(() => setSubmitStatus(null), 5000)
-    } catch (error) {
-      console.error('Error submitting form:', error)
-      setSubmitStatus('error')
-      setTimeout(() => setSubmitStatus(null), 5000)
-    } finally {
-      setIsSubmitting(false)
+      setStatus('success')
+      form.reset()
+      resetTurnstile()
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Something went wrong')
+      setStatus('error')
     }
   }
 
-  const inputBaseClass =
-    'w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm text-gray-900'
-  const inputErrorClass = 'border-red-500'
-  const inputNormalClass = 'border-gray-300'
+  const reset = () => {
+    setStatus('idle')
+    setErrorMessage('')
+    resetTurnstile()
+  }
+
+  const inputClass = "w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+
+  if (status === 'success') {
+    return (
+      <div className="bg-white rounded-2xl p-12 shadow-lg text-center">
+        <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <svg className="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h3 className="text-2xl font-bold text-gray-900">Demo Request Received!</h3>
+        <p className="mt-4 text-gray-600">
+          We'll contact you shortly to confirm your demo time.
+        </p>
+        <button
+          onClick={reset}
+          className="mt-8 text-primary-600 hover:text-primary-700 font-medium"
+        >
+          Submit another request
+        </button>
+      </div>
+    )
+  }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-8">
-      {submitStatus === 'success' && (
-        <div className="mb-8 p-4 bg-primary-50 border border-primary-200 text-primary-700 rounded-md flex items-start">
-          <CheckCircle className="h-5 w-5 mr-2 mt-0.5 text-primary-500" />
-          <div>
-            <p className="font-medium">Demo request received!</p>
-            <p>We'll contact you shortly to confirm your demo time.</p>
-          </div>
-        </div>
-      )}
-
-      {submitStatus === 'error' && (
-        <div className="mb-8 p-4 bg-red-50 border border-red-200 text-red-700 rounded-md flex items-start">
-          <AlertCircle className="h-5 w-5 mr-2 mt-0.5 text-red-500" />
-          <div>
-            <p className="font-medium">Something went wrong.</p>
-            <p>Please try again or contact us directly at info@agentai.app</p>
-          </div>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="md:col-span-2">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">Schedule a Demo</h3>
-          <p className="text-gray-600 mb-0">
-            Complete the form below to schedule a personalized demo of our AI-powered billing
-            platform.
+    <div className="bg-white rounded-2xl p-8 shadow-lg">
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Contact Information */}
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Complete the form below to schedule a personalized demo of our AI-powered billing platform.
           </p>
-        </div>
-
-        <div className="md:col-span-1">
-          <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">
-            First Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            id="first_name"
-            name="first_name"
-            value={formData.first_name}
-            onChange={handleChange}
-            className={`${inputBaseClass} ${errors.first_name ? inputErrorClass : inputNormalClass}`}
-          />
-          {errors.first_name && <p className="mt-1 text-sm text-red-600">{errors.first_name}</p>}
-        </div>
-
-        <div className="md:col-span-1">
-          <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">
-            Last Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            id="last_name"
-            name="last_name"
-            value={formData.last_name}
-            onChange={handleChange}
-            className={`${inputBaseClass} ${errors.last_name ? inputErrorClass : inputNormalClass}`}
-          />
-          {errors.last_name && <p className="mt-1 text-sm text-red-600">{errors.last_name}</p>}
-        </div>
-
-        <div className="md:col-span-1">
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email Address <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            className={`${inputBaseClass} ${errors.email ? inputErrorClass : inputNormalClass}`}
-          />
-          {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
-        </div>
-
-        <div className="md:col-span-1">
-          <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-            Phone Number <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="tel"
-            id="phone"
-            name="phone"
-            value={formData.phone}
-            onChange={handleChange}
-            className={`${inputBaseClass} ${errors.phone ? inputErrorClass : inputNormalClass}`}
-          />
-          {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
-        </div>
-
-        <div className="md:col-span-2">
-          <div className="h-px bg-gray-200 my-2"></div>
-          <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-0">Practice Information</h3>
-        </div>
-
-        <div className="md:col-span-1">
-          <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-1">
-            Company Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            id="company"
-            name="company"
-            value={formData.company}
-            onChange={handleChange}
-            className={`${inputBaseClass} ${inputNormalClass}`}
-          />
-          {errors.company && <p className="mt-1 text-sm text-red-600">{errors.company}</p>}
-        </div>
-
-        <div className="md:col-span-1">
-          <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
-            Your Role <span className="text-gray-500 font-normal">(optional)</span>
-          </label>
-          <input
-            type="text"
-            id="role"
-            name="role"
-            value={formData.role}
-            onChange={handleChange}
-            className={`${inputBaseClass} ${inputNormalClass}`}
-          />
-        </div>
-
-        <div className="md:col-span-1">
-          <label htmlFor="monthly_claims" className="block text-sm font-medium text-gray-700 mb-1">
-            Monthly Claims Volume <span className="text-red-500">*</span>
-          </label>
-          <select
-            id="monthly_claims"
-            name="monthly_claims"
-            value={formData.monthly_claims}
-            onChange={handleChange}
-            className={`${inputBaseClass} ${errors.monthly_claims ? inputErrorClass : inputNormalClass}`}
-          >
-            <option value="">Select volume</option>
-            {monthlyClaimsOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-          {errors.monthly_claims && (
-            <p className="mt-1 text-sm text-red-600">{errors.monthly_claims}</p>
-          )}
-        </div>
-
-        <div className="md:col-span-1">
-          <label htmlFor="preferred_time" className="block text-sm font-medium text-gray-700 mb-1">
-            Preferred Demo Time <span className="text-red-500">*</span>
-          </label>
-          <select
-            id="preferred_time"
-            name="preferred_time"
-            value={formData.preferred_time}
-            onChange={handleChange}
-            className={`${inputBaseClass} ${inputNormalClass}`}
-          >
-            <option value="">Select time</option>
-            {preferredTimeOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-          {errors.preferred_time && (
-            <p className="mt-1 text-sm text-red-600">{errors.preferred_time}</p>
-          )}
-        </div>
-
-        <div className="md:col-span-2">
-          <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
-            Additional Information <span className="text-gray-500 font-normal">(optional)</span>
-          </label>
-          <textarea
-            id="message"
-            name="message"
-            rows={4}
-            value={formData.message}
-            onChange={handleChange}
-            className={`${inputBaseClass} ${errors.message ? inputErrorClass : inputNormalClass}`}
-            placeholder="Tell us about your current billing challenges and what you'd like to see in the demo..."
-          ></textarea>
-        </div>
-
-        <div className="md:col-span-2">
-          <div className="flex items-start">
-            <div className="flex items-center h-5">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">
+                First Name <span className="text-red-500">*</span>
+              </label>
               <input
-                id="consent"
-                name="consent"
-                type="checkbox"
-                checked={formData.consent}
-                onChange={handleChange}
-                className={`h-4 w-4 text-primary-500 focus:ring-primary-500 border-gray-300 rounded ${errors.consent ? 'border-red-500' : ''}`}
+                type="text"
+                id="first_name"
+                name="first_name"
+                required
+                minLength={2}
+                maxLength={50}
+                className={inputClass}
               />
             </div>
-            <div className="ml-3 text-sm">
-              <label htmlFor="consent" className="font-medium text-gray-700">
-                I agree to the privacy policy <span className="text-red-500">*</span>
+            <div>
+              <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">
+                Last Name <span className="text-red-500">*</span>
               </label>
-              <p className="text-gray-500">
-                By submitting this form, you agree to our{' '}
-                <Link to="/privacy-policy" className="text-primary-500 hover:underline">
-                  privacy policy
-                </Link>
-                .
-              </p>
-              {errors.consent && <p className="mt-1 text-sm text-red-600">{errors.consent}</p>}
+              <input
+                type="text"
+                id="last_name"
+                name="last_name"
+                required
+                minLength={2}
+                maxLength={50}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                Email Address <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                Phone Number <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                required
+                className={inputClass}
+              />
             </div>
           </div>
         </div>
 
-        {/* Turnstile Widget */}
-        <div className="md:col-span-2 flex justify-center">
-          <div ref={turnstileRef}></div>
+        {/* Practice Information */}
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Practice Information</h3>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-1">
+                Company Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="company"
+                name="company"
+                required
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
+                Your Role <span className="text-gray-400">(optional)</span>
+              </label>
+              <input
+                type="text"
+                id="role"
+                name="role"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="monthly_claims" className="block text-sm font-medium text-gray-700 mb-1">
+                Monthly Claims Volume <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="monthly_claims"
+                name="monthly_claims"
+                required
+                className={inputClass}
+              >
+                <option value="">Select volume</option>
+                {monthlyClaimsOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="preferred_time" className="block text-sm font-medium text-gray-700 mb-1">
+                Preferred Demo Time <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="preferred_time"
+                name="preferred_time"
+                required
+                className={inputClass}
+              >
+                <option value="">Select time</option>
+                {preferredTimeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="mt-4">
+            <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
+              Additional Information <span className="text-gray-400">(optional)</span>
+            </label>
+            <textarea
+              id="message"
+              name="message"
+              rows={4}
+              placeholder="Tell us about your current billing challenges and what you'd like to see in the demo..."
+              className={`${inputClass} resize-none`}
+            />
+          </div>
         </div>
 
-        <div className="md:col-span-2">
-          <Button type="submit" disabled={isSubmitting || !turnstileToken} className="w-full">
-            {isSubmitting ? 'Processing...' : 'Schedule Demo'}
-          </Button>
-          <p className="text-center text-gray-500 text-sm mt-4">
-            Your information is secure and will never be shared with third parties.
-          </p>
+        {/* Honeypot */}
+        <div className="absolute left-[-9999px]" aria-hidden="true">
+          <input type="text" name="website_hp" tabIndex={-1} autoComplete="off" />
         </div>
+
+        {/* Turnstile */}
+        <div ref={turnstileRef} />
+
+        {/* Error Message */}
+        {status === 'error' && (
+          <div className="p-4 bg-red-50 border border-red-100 rounded-lg text-red-600 text-sm">
+            {errorMessage}
+          </div>
+        )}
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          disabled={status === 'submitting'}
+          className="w-full bg-primary-500 text-white py-4 rounded-lg font-semibold hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {status === 'submitting' ? 'Processing...' : 'Schedule Demo'}
+        </button>
+
+        {/* Privacy notice */}
+        <p className="flex items-center justify-center gap-1.5 text-xs text-gray-500 text-center">
+          <svg className="w-3.5 h-3.5 text-primary-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+          </svg>
+          Secure form. By submitting, you agree to our{' '}
+          <Link to="/privacy-policy" className="text-primary-600 hover:underline">
+            privacy policy
+          </Link>
+        </p>
       </form>
     </div>
   )
