@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Calendar, CheckCircle, AlertCircle } from 'lucide-react'
 import Button from '../components/ui/Button'
+
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || ''
 
 interface FormData {
   first_name: string
@@ -91,6 +93,44 @@ function ScheduleDemoForm() {
   const [errors, setErrors] = useState<ValidationErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<null | 'success' | 'error'>(null)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const turnstileRef = useRef<HTMLDivElement>(null)
+  const widgetIdRef = useRef<string | null>(null)
+
+  // Initialize Turnstile
+  useEffect(() => {
+    if (!turnstileRef.current || !TURNSTILE_SITE_KEY) return
+    if (widgetIdRef.current) return // Already initialized
+
+    const initTurnstile = () => {
+      if (window.turnstile && turnstileRef.current) {
+        widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+          sitekey: TURNSTILE_SITE_KEY,
+          callback: (token: string) => setTurnstileToken(token),
+          'expired-callback': () => setTurnstileToken(null),
+        })
+      }
+    }
+
+    if (window.turnstile) {
+      initTurnstile()
+    } else {
+      const interval = setInterval(() => {
+        if (window.turnstile) {
+          clearInterval(interval)
+          initTurnstile()
+        }
+      }, 100)
+      return () => clearInterval(interval)
+    }
+
+    return () => {
+      if (widgetIdRef.current) {
+        window.turnstile?.remove(widgetIdRef.current)
+        widgetIdRef.current = null
+      }
+    }
+  }, [])
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -173,33 +213,33 @@ function ScheduleDemoForm() {
       return
     }
 
+    if (!turnstileToken) {
+      setSubmitStatus('error')
+      return
+    }
+
     setIsSubmitting(true)
     setSubmitStatus(null)
 
     try {
-      const response = await fetch(
-        import.meta.env.VITE_CONTACT_FORM_API_URL ||
-          'https://agentai-contact-form-worker.brahami-sacha.workers.dev/contact-form',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          body: JSON.stringify({
-            ...formData,
-            form_type: 'demo_request',
-            phone: formData.phone.replace(/\D/g, ''),
-            timestamp: new Date().toISOString(),
-            userAgent: navigator.userAgent,
-            referrer: document.referrer || 'Direct access',
-            source: window.location.href,
-          }),
-        }
-      )
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: `${formData.first_name} ${formData.last_name}`,
+          email: formData.email,
+          phone: formData.phone,
+          company: formData.company,
+          message: `Demo Request\n\nRole: ${formData.role || 'Not specified'}\nMonthly Claims: ${formData.monthly_claims}\nPreferred Time: ${formData.preferred_time}\n\nAdditional Info:\n${formData.message || 'None'}`,
+          'cf-turnstile-response': turnstileToken,
+        }),
+      })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        const data = await response.json() as { error?: string }
+        throw new Error(data.error || 'Failed to submit')
       }
 
       setSubmitStatus('success')
@@ -215,6 +255,11 @@ function ScheduleDemoForm() {
         message: '',
         consent: false,
       })
+      // Reset Turnstile
+      if (widgetIdRef.current) {
+        window.turnstile?.reset(widgetIdRef.current)
+      }
+      setTurnstileToken(null)
 
       setTimeout(() => setSubmitStatus(null), 5000)
     } catch (error) {
@@ -445,8 +490,13 @@ function ScheduleDemoForm() {
           </div>
         </div>
 
+        {/* Turnstile Widget */}
+        <div className="md:col-span-2 flex justify-center">
+          <div ref={turnstileRef}></div>
+        </div>
+
         <div className="md:col-span-2">
-          <Button type="submit" disabled={isSubmitting} className="w-full">
+          <Button type="submit" disabled={isSubmitting || !turnstileToken} className="w-full">
             {isSubmitting ? 'Processing...' : 'Schedule Demo'}
           </Button>
           <p className="text-center text-gray-500 text-sm mt-4">
