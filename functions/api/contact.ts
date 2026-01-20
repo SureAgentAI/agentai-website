@@ -89,8 +89,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'AgentAI Website <noreply@agentai.app>',
-        to: ['contact@agentai.app'],
+        from: 'AgentAI Website <noreply@agentai.biz>',
+        to: ['contact@agentai.biz'],
         subject: `New Contact: ${data.name}`,
         html: `
           <h2>New Contact Form Submission</h2>
