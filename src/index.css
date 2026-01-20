@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @plugin '@tailwindcss/typography';
 
 /* ============================================
@@ -6,8 +7,8 @@
    ============================================ */
 @theme {
   /* Typography */
-  --font-display: 'Visby ExtraBold', system-ui, sans-serif;
-  --font-body: 'Avenir Light', system-ui, sans-serif;
+  --font-display: 'Visby ExtraBold', sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   /* Primary color palette - AgentAI Green */
   --color-primary-50: #f0fdf4;
@@ -58,10 +59,21 @@ body {
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: white;
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
+  font-weight: 700;
+}
+
+/* Utility classes for fonts */
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-body {
+  font-family: var(--font-body);
 }
 
 /* ============================================
@@ -141,9 +153,23 @@ h1, h2, h3, h4, h5, h6 {
   @apply bg-gradient-to-r from-primary-500 to-primary-600 bg-clip-text text-transparent;
 }
 
-/* Container */
+/* Container - matches old site container-responsive */
 .container-site {
-  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+@media (min-width: 640px) {
+  .container-site {
+    padding: 0 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-site {
+    padding: 0 2rem;
+  }
 }
 
 /* Section spacing */

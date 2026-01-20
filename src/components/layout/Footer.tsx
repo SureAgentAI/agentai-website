@@ -6,9 +6,8 @@ const navigation = {
     { name: 'Product', href: '/product' },
   ],
   company: [
-    { name: 'About', href: '/about' },
-    { name: 'Press', href: '/press' },
     { name: 'Partner', href: '/partner' },
+    { name: 'About', href: '/about' },
   ],
 }
 
@@ -16,7 +15,7 @@ export default function Footer() {
   return (
     <footer className="bg-gray-900 text-white">
       <div className="container-site py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
             <Link to="/">
@@ -63,6 +62,23 @@ export default function Footer() {
                   </Link>
                 </li>
               ))}
+            </ul>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wider mb-4">Contact</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link to="/contact" className="inline-block px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors text-sm">
+                  Contact Us
+                </Link>
+              </li>
+              <li>
+                <a href="mailto:contact@agentai.app" className="text-gray-400 hover:text-white transition-colors">
+                  contact@agentai.app
+                </a>
+              </li>
             </ul>
           </div>
         </div>

@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
-import Button from '../ui/Button'
 
 const navLinks = [
+  { label: 'Home', href: '/' },
   { label: 'Product', href: '/product' },
-  { label: 'About', href: '/about' },
+  { label: 'Partner', href: '/partner' },
+  { label: 'About Us', href: '/about' },
   { label: 'Press', href: '/press' },
-  { label: 'Contact', href: '/contact' },
 ]
 
 export default function Header() {
@@ -15,21 +15,21 @@ export default function Header() {
   const location = useLocation()
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+    <header className="bg-white/95 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50 shadow-sm">
       <nav className="container-site">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link to="/" className="flex-shrink-0">
-            <img src="/images/assets/logo.png" alt="AgentAI" className="h-10 w-auto" />
+            <img src="/images/assets/logo.png" alt="AgentAI" className="h-12 w-auto" />
           </Link>
 
           {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden lg:flex lg:items-center lg:space-x-8">
             {navLinks.map(link => (
               <Link
                 key={link.href}
                 to={link.href}
-                className={`text-sm font-medium transition-colors ${
+                className={`px-3 py-2 text-sm font-medium transition-colors ${
                   location.pathname === link.href
                     ? 'text-primary-500'
                     : 'text-gray-600 hover:text-primary-500'
@@ -38,14 +38,17 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
-            <Link to="/demo">
-              <Button size="sm">Get Demo</Button>
+            <Link
+              to="/demo"
+              className="inline-flex items-center px-6 py-3 bg-primary-500 text-white font-medium rounded-lg hover:bg-primary-600 transition-colors ml-8"
+            >
+              Schedule Demo
             </Link>
           </div>
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2 text-gray-600"
+            className="lg:hidden p-2 text-gray-600 hover:text-primary-500 hover:bg-gray-100 rounded-md transition-colors"
             onClick={() => setIsOpen(!isOpen)}
             aria-label="Toggle menu"
           >
@@ -55,24 +58,30 @@ export default function Header() {
 
         {/* Mobile Nav */}
         {isOpen && (
-          <div className="md:hidden py-4 border-t border-gray-100">
-            {navLinks.map(link => (
+          <div className="lg:hidden border-t border-gray-100 bg-white">
+            <div className="px-2 pt-2 pb-3 space-y-1">
+              {navLinks.map(link => (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  className={`block px-3 py-2 text-base font-medium rounded-md transition-colors ${
+                    location.pathname === link.href
+                      ? 'text-primary-500 bg-gray-50'
+                      : 'text-gray-700 hover:text-primary-500 hover:bg-gray-50'
+                  }`}
+                  onClick={() => setIsOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ))}
               <Link
-                key={link.href}
-                to={link.href}
-                className={`block py-3 ${
-                  location.pathname === link.href
-                    ? 'text-primary-500'
-                    : 'text-gray-600 hover:text-primary-500'
-                }`}
+                to="/demo"
+                className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-primary-500 hover:bg-gray-50 rounded-md transition-colors"
                 onClick={() => setIsOpen(false)}
               >
-                {link.label}
+                Schedule Demo
               </Link>
-            ))}
-            <Link to="/demo" className="block pt-4" onClick={() => setIsOpen(false)}>
-              <Button className="w-full">Get Demo</Button>
-            </Link>
+            </div>
           </div>
         )}
       </nav>
