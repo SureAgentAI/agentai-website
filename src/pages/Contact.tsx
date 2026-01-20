@@ -36,7 +36,13 @@ export default function Contact() {
           phone: formData.get('phone') || '',
           company: formData.get('company') || '',
           message: formData.get('message'),
+          template: 'contact',
           'cf-turnstile-response': turnstileToken,
+          _meta: {
+            referrer: document.referrer || 'direct',
+            page_url: window.location.href,
+            timestamp: new Date().toISOString(),
+          },
         }),
       })
 

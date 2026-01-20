@@ -81,8 +81,17 @@ function ScheduleDemoForm() {
           email: formData.get('email'),
           phone: formData.get('phone') || '',
           company: formData.get('company') || '',
-          message: `Demo Request\n\nRole: ${formData.get('role') || 'Not specified'}\nMonthly Claims: ${formData.get('monthly_claims')}\nPreferred Time: ${formData.get('preferred_time')}\n\nAdditional Info:\n${formData.get('message') || 'None'}`,
+          role: formData.get('role') || '',
+          monthly_claims: formData.get('monthly_claims') || '',
+          preferred_time: formData.get('preferred_time') || '',
+          message: formData.get('message') || '',
+          template: 'demo',
           'cf-turnstile-response': turnstileToken,
+          _meta: {
+            referrer: document.referrer || 'direct',
+            page_url: window.location.href,
+            timestamp: new Date().toISOString(),
+          },
         }),
       })
 
