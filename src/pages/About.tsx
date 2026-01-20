@@ -1,0 +1,689 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Users, Zap, TrendingUp, Shield, Mail, Building, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react'
+import Button from '../components/ui/Button'
+
+// Investor accent colors using Tailwind theme colors
+const investorColors = {
+  transformationCapital: 'bg-amber-500/10',
+  eirPartners: 'bg-sky-400/10',
+  slowVentures: 'bg-gray-100',
+  oceans: 'bg-slate-800'
+}
+
+const team = [
+  {
+    name: 'Zorik Gordon',
+    role: 'CEO',
+    area: 'Product & Vision',
+    bio: 'A visionary leader and serial tech entrepreneur with multiple successful exits. Founded and served as CEO of Serviz (acquired by Porch 2018), ReachLocal (NASDAQ: RLOC, acquired by Gannett 2016), and WorldWinner (acquired by Liberty Media).'
+  },
+  {
+    name: 'Michael Gorodetsky',
+    role: 'VP of Operations',
+    area: 'Sales & Execution',
+    bio: 'An experienced tech sales and operations leader specializing in startup growth. Led vendor acquisition at Serviz Inc. (acquired by Porch in 2018). Expert in building and scaling sales and operations teams for high-growth companies.'
+  },
+  {
+    name: 'Sacha Brahami',
+    role: 'VP of Product',
+    area: 'AI & Systems',
+    bio: 'A product and systems builder with a background in finance and data engineering. Leads product vision, roadmap, and delivery across AI automation and data processing. Expert in building internal tools, analytics infrastructure, and automation pipelines.'
+  }
+]
+
+// Contact Form Component
+interface FormData {
+  first_name: string
+  last_name: string
+  email: string
+  phone: string
+  company: string
+  role: string
+  message: string
+  consent: boolean
+}
+
+interface ValidationErrors {
+  first_name?: string
+  last_name?: string
+  email?: string
+  phone?: string
+  company?: string
+  role?: string
+  message?: string
+  consent?: string
+}
+
+function ContactForm() {
+  const [formData, setFormData] = useState<FormData>({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    company: '',
+    role: '',
+    message: '',
+    consent: false
+  })
+
+  const [errors, setErrors] = useState<ValidationErrors>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState<null | 'success' | 'error'>(null)
+
+  const formatPhoneNumber = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, '')
+    if (cleaned.length >= 10) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`
+    }
+    return phone
+  }
+
+  const validateForm = (): boolean => {
+    const newErrors: ValidationErrors = {}
+    let isValid = true
+
+    if (!formData.first_name.trim()) {
+      newErrors.first_name = "First name is required"
+      isValid = false
+    }
+
+    if (!formData.last_name.trim()) {
+      newErrors.last_name = "Last name is required"
+      isValid = false
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required"
+      isValid = false
+    } else if (!emailRegex.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address"
+      isValid = false
+    }
+
+    if (formData.phone && !/^[\d\+\-\(\) ]{7,15}$/.test(formData.phone)) {
+      newErrors.phone = "Please enter a valid phone number"
+      isValid = false
+    }
+
+    if (!formData.message.trim()) {
+      newErrors.message = "Message is required"
+      isValid = false
+    }
+
+    if (!formData.consent) {
+      newErrors.consent = "You must agree to the privacy policy"
+      isValid = false
+    }
+
+    setErrors(newErrors)
+    return isValid
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target
+    const checked = (e.target as HTMLInputElement).checked
+
+    if (name === 'phone') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: formatPhoneNumber(value)
+      }))
+    } else if (type === 'checkbox') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: checked
+      }))
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }))
+    }
+
+    if (errors[name as keyof ValidationErrors]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }))
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!validateForm()) {
+      return
+    }
+
+    setIsSubmitting(true)
+    setSubmitStatus(null)
+
+    try {
+      const response = await fetch(import.meta.env.VITE_CONTACT_FORM_API_URL || 'https://agentai-contact-form-worker.brahami-sacha.workers.dev/contact-form', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          ...formData,
+          phone: formData.phone ? formData.phone.replace(/\D/g, '') : '',
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          referrer: document.referrer || 'Direct access',
+          source: window.location.href
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      setSubmitStatus('success')
+      setFormData({
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        company: '',
+        role: '',
+        message: '',
+        consent: false
+      })
+
+      setTimeout(() => setSubmitStatus(null), 5000)
+    } catch (error) {
+      console.error('Error submitting form:', error)
+      setSubmitStatus('error')
+      setTimeout(() => setSubmitStatus(null), 5000)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow-lg p-8">
+      {submitStatus === 'success' && (
+        <div className="mb-8 p-4 bg-primary-50 border border-primary-200 text-primary-700 rounded-md flex items-start">
+          <CheckCircle className="h-5 w-5 mr-2 mt-0.5 text-primary-500" />
+          <div>
+            <p className="font-medium">Thank you for your message!</p>
+            <p>We'll be in touch shortly to discuss how we can help you.</p>
+          </div>
+        </div>
+      )}
+
+      {submitStatus === 'error' && (
+        <div className="mb-8 p-4 bg-red-50 border border-red-200 text-red-700 rounded-md flex items-start">
+          <AlertCircle className="h-5 w-5 mr-2 mt-0.5 text-red-500" />
+          <div>
+            <p className="font-medium">Something went wrong.</p>
+            <p>Please try again or contact us directly at info@agentai.app</p>
+          </div>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="md:col-span-2">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">Get In Touch</h3>
+          <p className="text-gray-600 mb-0">Fill out the form below and we'll get back to you as soon as possible.</p>
+        </div>
+
+        <div className="md:col-span-1">
+          <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">
+            First Name <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            id="first_name"
+            name="first_name"
+            value={formData.first_name}
+            onChange={handleChange}
+            className={`w-full px-4 py-2 border ${errors.first_name ? 'border-red-500' : 'border-gray-300'} rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm text-gray-900`}
+          />
+          {errors.first_name && (
+            <p className="mt-1 text-sm text-red-600">{errors.first_name}</p>
+          )}
+        </div>
+
+        <div className="md:col-span-1">
+          <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">
+            Last Name <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            id="last_name"
+            name="last_name"
+            value={formData.last_name}
+            onChange={handleChange}
+            className={`w-full px-4 py-2 border ${errors.last_name ? 'border-red-500' : 'border-gray-300'} rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm text-gray-900`}
+          />
+          {errors.last_name && (
+            <p className="mt-1 text-sm text-red-600">{errors.last_name}</p>
+          )}
+        </div>
+
+        <div className="md:col-span-1">
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            Email Address <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            className={`w-full px-4 py-2 border ${errors.email ? 'border-red-500' : 'border-gray-300'} rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm text-gray-900`}
+          />
+          {errors.email && (
+            <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+          )}
+        </div>
+
+        <div className="md:col-span-1">
+          <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+            Phone Number <span className="text-gray-500 font-normal">(optional)</span>
+          </label>
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            value={formData.phone}
+            onChange={handleChange}
+            className={`w-full px-4 py-2 border ${errors.phone ? 'border-red-500' : 'border-gray-300'} rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm text-gray-900`}
+          />
+          {errors.phone && (
+            <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+          )}
+        </div>
+
+        <div className="md:col-span-1">
+          <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-1">
+            Company <span className="text-gray-500 font-normal">(optional)</span>
+          </label>
+          <input
+            type="text"
+            id="company"
+            name="company"
+            value={formData.company}
+            onChange={handleChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm text-gray-900"
+          />
+        </div>
+
+        <div className="md:col-span-1">
+          <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
+            Role <span className="text-gray-500 font-normal">(optional)</span>
+          </label>
+          <input
+            type="text"
+            id="role"
+            name="role"
+            value={formData.role}
+            onChange={handleChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm text-gray-900"
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
+            Message <span className="text-red-500">*</span>
+          </label>
+          <textarea
+            id="message"
+            name="message"
+            rows={4}
+            value={formData.message}
+            onChange={handleChange}
+            className={`w-full px-4 py-2 border ${errors.message ? 'border-red-500' : 'border-gray-300'} rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm text-gray-900`}
+            placeholder="How can we help you?"
+          ></textarea>
+          {errors.message && (
+            <p className="mt-1 text-sm text-red-600">{errors.message}</p>
+          )}
+        </div>
+
+        <div className="md:col-span-2">
+          <div className="flex items-start">
+            <div className="flex items-center h-5">
+              <input
+                id="consent"
+                name="consent"
+                type="checkbox"
+                checked={formData.consent}
+                onChange={handleChange}
+                className={`h-4 w-4 text-primary-500 focus:ring-primary-500 border-gray-300 rounded ${errors.consent ? 'border-red-500' : ''}`}
+              />
+            </div>
+            <div className="ml-3 text-sm">
+              <label htmlFor="consent" className="font-medium text-gray-700">
+                I agree to the privacy policy <span className="text-red-500">*</span>
+              </label>
+              <p className="text-gray-500">
+                By submitting this form, you agree to our <Link to="/privacy-policy" className="text-primary-500 hover:underline">privacy policy</Link>.
+              </p>
+              {errors.consent && (
+                <p className="mt-1 text-sm text-red-600">{errors.consent}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="md:col-span-2">
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full"
+          >
+            {isSubmitting ? 'Processing...' : 'Submit Inquiry'}
+          </Button>
+          <p className="text-center text-gray-500 text-sm mt-4">
+            Your information is secure and will never be shared with third parties.
+          </p>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+export default function About() {
+  return (
+    <main>
+      {/* Hero Section */}
+      <section className="relative bg-gradient-to-br from-white via-primary-50 to-primary-100 py-20">
+        <div className="container mx-auto px-6">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight mb-6">
+              Transforming <span className="gradient-text">Healthcare</span> with AI
+            </h1>
+            <p className="text-xl text-gray-600 leading-relaxed">
+              Founded in 2023 with a vision to transform the healthcare revenue cycle
+            </p>
+          </div>
+        </div>
+        {/* Background decoration */}
+        <div className="opacity-0 [@media(min-width:1730px)]:opacity-100 absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-primary-500/5 to-transparent rounded-full blur-3xl"></div>
+        <div className="opacity-0 [@media(min-width:1730px)]:opacity-100 absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-primary-500/5 to-transparent rounded-full blur-3xl"></div>
+      </section>
+
+      {/* Mission & Vision */}
+      <div className="py-10">
+        <div className="container mx-auto px-6">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-3xl lg:text-4xl text-center font-bold text-gray-900 mb-6">Building the Future of Medical Billing</h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center mb-12">
+              <div>
+                <div className="w-16 h-16 bg-primary-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Zap className="w-8 h-8 text-primary-500" />
+                </div>
+                <h3 className="text-xl text-gray-800 mb-2">Innovation</h3>
+                <p className="text-gray-600">
+                  Pioneering AI technology that automates complex billing workflows
+                </p>
+              </div>
+
+              <div>
+                <div className="w-16 h-16 bg-primary-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-8 h-8 text-primary-500" />
+                </div>
+                <h3 className="text-xl text-gray-800 mb-2">Experience</h3>
+                <p className="text-gray-600">
+                  Deep expertise in healthcare technology and business transformation
+                </p>
+              </div>
+
+              <div>
+                <div className="w-16 h-16 bg-primary-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <TrendingUp className="w-8 h-8 text-primary-500" />
+                </div>
+                <h3 className="text-xl text-gray-800 mb-2">Growth</h3>
+                <p className="text-gray-600">
+                  Rapid expansion through strategic partnerships and acquisitions
+                </p>
+              </div>
+            </div>
+
+            {/* Mission Statement Quote */}
+            <div className="bg-gradient-to-r from-primary-100 to-white border-l-4 border-primary-500 p-8 rounded-lg text-center max-w-3xl mx-auto shadow-sm">
+              <div className="flex items-center justify-center mb-4">
+                <Shield className="w-6 h-6 text-primary-500 mr-2" />
+                <h3 className="text-sm font-semibold text-primary-500 uppercase tracking-wide">Our Mission</h3>
+              </div>
+              <blockquote className="text-lg text-gray-800 font-medium leading-relaxed">
+                Transform the industry by using AI to automate the most complex billing and RCM tasks, empowering providers to achieve new levels of efficiency and profitability.
+              </blockquote>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Leadership Team */}
+      <div className="bg-gray-50 py-10">
+        <div className="container mx-auto px-6">
+          <h2 className="text-3xl lg:text-4xl text-center font-bold text-gray-900 mb-4">Leadership Team</h2>
+          <p className="text-lg text-center text-gray-600 mb-8">
+            Bringing together expertise in technology, healthcare, and business transformation
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-12 max-w-6xl mx-auto">
+            {team.map((member) => (
+              <div key={member.name} className="bg-white rounded-lg shadow-sm p-6 text-center">
+                <div className="mb-6">
+                  <img
+                    src={`/images/team/${member.name.split(' ')[0].toLowerCase()}.png`}
+                    alt={member.name}
+                    className="w-32 h-32 rounded-full mx-auto object-cover"
+                  />
+                </div>
+                <div className="text-primary-500 text-sm font-semibold mb-2">{member.area}</div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">{member.name}</h3>
+                <div className="text-gray-600 font-medium mb-4">{member.role}</div>
+                <p className="text-gray-600 text-sm">
+                  {member.bio}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Investors & Advisors */}
+      <div className="bg-white py-10">
+        <div className="container mx-auto px-6">
+          <h2 className="text-3xl lg:text-4xl text-center font-bold text-gray-900 mb-10">Backed by Industry Leaders</h2>
+
+          <div className="max-w-5xl mx-auto">
+            {/* Venture Firms */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className={`bg-gradient-to-br ${investorColors.transformationCapital} rounded-lg p-6 text-center border shadow-md`}>
+                <img
+                  src="/images/external/tcap.svg"
+                  alt="Transformation Capital"
+                  className="h-12 mx-auto mb-4"
+                />
+                <div className="text-xl font-semibold text-gray-800 mb-2">Transformation Capital</div>
+                <p className="text-gray-600">Growth equity firm focused on digital health and technology-enabled services companies.</p>
+              </div>
+
+              <div className={`bg-gradient-to-br ${investorColors.eirPartners} rounded-lg p-6 text-center border shadow-md`}>
+                <img
+                  src="/images/external/eir.jpg.png"
+                  alt="EIR Partners"
+                  className="h-12 mx-auto mb-4"
+                />
+                <div className="text-xl font-semibold text-gray-800 mb-2">EIR Partners</div>
+                <p className="text-gray-600">Private equity firm focused exclusively on healthcare technology and tech-enabled services.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+              <div className={`bg-gradient-to-br ${investorColors.slowVentures} rounded-lg p-6 text-center border shadow-md`}>
+                <img
+                  src="/images/external/slow.png.webp"
+                  alt="Slow Ventures"
+                  className="h-12 mx-auto mb-4"
+                />
+                <div className="text-xl font-semibold text-gray-800">Slow Ventures</div>
+                <p className="text-gray-600">Early-stage venture capital firm with deep expertise in consumer, fintech, SaaS, and healthcare sectors.</p>
+              </div>
+
+              <div className={`${investorColors.oceans} rounded-lg p-6 text-center shadow-lg`}>
+                <img
+                  src="/images/external/oceans.png"
+                  alt="Oceans"
+                  className="h-12 mx-auto mb-4"
+                />
+                <div className="text-xl font-semibold text-white mb-2">Oceans</div>
+                <p className="text-gray-200">NYC-based early-stage VC firm leading pre-seed and seed deals with hands-on venture coaching.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Strategic Advisors */}
+      <div className="bg-gray-50 py-10">
+        <div className="container mx-auto px-6">
+          <h3 className="text-3xl lg:text-4xl text-center font-bold text-gray-900 mb-8">Strategic Advisors</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <div className="bg-white rounded-lg shadow-md p-5 text-center border border-gray-100">
+              <div className="relative z-10">
+                <h4 className="text-lg font-semibold text-gray-800 mb-1">Sean Rad</h4>
+                <div className="text-primary-500 mb-2">Founder, Tinder</div>
+                <div className="h-12">
+                  <img
+                    src="/images/external/tinder-logo.png"
+                    alt="Sean Rad's company logo"
+                    className="h-full mx-auto object-contain"
+                    style={{
+                      transform: 'scale(1.8)',
+                      opacity: 0.7
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-5 text-center border border-gray-100">
+              <div className="relative z-10">
+                <h4 className="text-lg font-semibold text-gray-800 mb-1">Geoffrey Price</h4>
+                <div className="text-primary-500 mb-2">Co-Founder, Oak Street Health</div>
+                <div className="h-12">
+                  <img
+                    src="/images/external/oak-street-health-logo.png"
+                    alt="Geoffrey Price's company logo"
+                    className="h-full mx-auto object-contain"
+                    style={{
+                      transform: 'scale(0.8)',
+                      opacity: 0.8
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-5 text-center border border-gray-100">
+              <div className="relative z-10">
+                <h4 className="text-lg font-semibold text-gray-800 mb-1">Howard Lerman</h4>
+                <div className="text-primary-500 mb-2">Founder & CEO, Yext</div>
+                <div className="h-12">
+                  <img
+                    src="/images/external/yext-logo.png"
+                    alt="Howard Lerman's company logo"
+                    className="h-full mx-auto object-contain"
+                    style={{
+                      transform: 'scale(0.7)',
+                      opacity: 0.8
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Contact Section */}
+      <div className="py-10 bg-white">
+        <div className="container mx-auto px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 max-w-6xl mx-auto">
+            {/* Contact Information */}
+
+            <div className="lg:col-span-5 space-y-12 lg:flex lg:flex-col lg:justify-center">
+              <div className="overflow-hidden rounded-lg shadow-lg">
+                <img
+                  src="/images/assets/building.jpg"
+                  alt="AgentAI Office"
+                  className="w-full h-64 object-cover"
+                />
+              </div>
+
+              <div className="space-y-8">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-primary-500/10 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Building className="w-6 h-6 text-primary-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl text-gray-800 mb-2">Los Angeles Office</h3>
+                    <p className="text-gray-600">
+                      21255 Burbank Blvd, Suite 120<br />
+                      Los Angeles, CA 91367
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-primary-500/10 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Mail className="w-6 h-6 text-primary-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl text-gray-800 mb-2">Email</h3>
+                    <a href="mailto:contact@agentai.app" className="text-gray-600 hover:text-primary-500">
+                      contact@agentai.app
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Form */}
+            <div className="lg:col-span-7">
+              <ContactForm />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CTA Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="container mx-auto px-6">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
+              Want to Learn More?
+            </h2>
+            <p className="text-xl text-gray-600 mb-8">
+              Discover how AgentAI is transforming healthcare through intelligent automation and expert support.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link to="/demo">
+                <Button size="lg">
+                  Schedule Demo
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </Link>
+              <Link to="/contact">
+                <Button variant="secondary" size="lg">
+                  Contact Us
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  )
+}
