@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { Users, Zap, TrendingUp, Shield, Mail, Building, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react'
+import { Users, Zap, TrendingUp, Shield, Mail, Building, ArrowRight } from 'lucide-react'
 import Button from '../components/ui/Button'
+import { useTurnstile } from '../hooks/useTurnstile'
 
 // Investor accent colors using Tailwind theme colors
 const investorColors = {
@@ -32,357 +33,229 @@ const team = [
   }
 ]
 
-// Contact Form Component
-interface FormData {
-  first_name: string
-  last_name: string
-  email: string
-  phone: string
-  company: string
-  role: string
-  message: string
-  consent: boolean
-}
-
-interface ValidationErrors {
-  first_name?: string
-  last_name?: string
-  email?: string
-  phone?: string
-  company?: string
-  role?: string
-  message?: string
-  consent?: string
-}
+type FormStatus = 'idle' | 'submitting' | 'success' | 'error'
 
 function ContactForm() {
-  const [formData, setFormData] = useState<FormData>({
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    company: '',
-    role: '',
-    message: '',
-    consent: false
-  })
+  const [status, setStatus] = useState<FormStatus>('idle')
+  const [errorMessage, setErrorMessage] = useState('')
+  const { token: turnstileToken, containerRef: turnstileRef, reset: resetTurnstile } = useTurnstile()
 
-  const [errors, setErrors] = useState<ValidationErrors>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitStatus, setSubmitStatus] = useState<null | 'success' | 'error'>(null)
-
-  const formatPhoneNumber = (phone: string) => {
-    const cleaned = phone.replace(/\D/g, '')
-    if (cleaned.length >= 10) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`
-    }
-    return phone
-  }
-
-  const validateForm = (): boolean => {
-    const newErrors: ValidationErrors = {}
-    let isValid = true
-
-    if (!formData.first_name.trim()) {
-      newErrors.first_name = "First name is required"
-      isValid = false
-    }
-
-    if (!formData.last_name.trim()) {
-      newErrors.last_name = "Last name is required"
-      isValid = false
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required"
-      isValid = false
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address"
-      isValid = false
-    }
-
-    if (formData.phone && !/^[\d\+\-\(\) ]{7,15}$/.test(formData.phone)) {
-      newErrors.phone = "Please enter a valid phone number"
-      isValid = false
-    }
-
-    if (!formData.message.trim()) {
-      newErrors.message = "Message is required"
-      isValid = false
-    }
-
-    if (!formData.consent) {
-      newErrors.consent = "You must agree to the privacy policy"
-      isValid = false
-    }
-
-    setErrors(newErrors)
-    return isValid
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target
-    const checked = (e.target as HTMLInputElement).checked
-
-    if (name === 'phone') {
-      setFormData(prev => ({
-        ...prev,
-        [name]: formatPhoneNumber(value)
-      }))
-    } else if (type === 'checkbox') {
-      setFormData(prev => ({
-        ...prev,
-        [name]: checked
-      }))
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }))
-    }
-
-    if (errors[name as keyof ValidationErrors]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }))
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    const form = e.currentTarget
+    const formData = new FormData(form)
 
-    if (!validateForm()) {
+    // Honeypot check
+    if (formData.get('website_hp')) return
+
+    if (!turnstileToken) {
+      setErrorMessage('Please complete the verification')
+      setStatus('error')
       return
     }
 
-    setIsSubmitting(true)
-    setSubmitStatus(null)
+    setStatus('submitting')
+    setErrorMessage('')
 
     try {
-      const response = await fetch(import.meta.env.VITE_CONTACT_FORM_API_URL || 'https://agentai-contact-form-worker.brahami-sacha.workers.dev/contact-form', {
+      const response = await fetch('/api/contact', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
-          phone: formData.phone ? formData.phone.replace(/\D/g, '') : '',
-          timestamp: new Date().toISOString(),
-          userAgent: navigator.userAgent,
-          referrer: document.referrer || 'Direct access',
-          source: window.location.href
-        })
+          name: `${formData.get('first_name')} ${formData.get('last_name')}`,
+          email: formData.get('email'),
+          phone: formData.get('phone') || '',
+          company: formData.get('company') || '',
+          role: formData.get('role') || '',
+          message: formData.get('message'),
+          template: 'about',
+          'cf-turnstile-response': turnstileToken,
+          _meta: {
+            referrer: document.referrer || 'direct',
+            page_url: window.location.href,
+            timestamp: new Date().toISOString(),
+          },
+        }),
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        const data = await response.json() as { error?: string }
+        throw new Error(data.error || 'Failed to submit')
       }
 
-      setSubmitStatus('success')
-      setFormData({
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: '',
-        company: '',
-        role: '',
-        message: '',
-        consent: false
-      })
-
-      setTimeout(() => setSubmitStatus(null), 5000)
-    } catch (error) {
-      console.error('Error submitting form:', error)
-      setSubmitStatus('error')
-      setTimeout(() => setSubmitStatus(null), 5000)
-    } finally {
-      setIsSubmitting(false)
+      setStatus('success')
+      form.reset()
+      resetTurnstile()
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Something went wrong')
+      setStatus('error')
     }
+  }
+
+  const reset = () => {
+    setStatus('idle')
+    setErrorMessage('')
+    resetTurnstile()
+  }
+
+  const inputClass = "w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+
+  if (status === 'success') {
+    return (
+      <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+        <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <svg className="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h3 className="text-2xl font-bold text-gray-900">Thank You!</h3>
+        <p className="mt-4 text-gray-600">
+          We have received your message and will get back to you as soon as possible.
+        </p>
+        <button
+          onClick={reset}
+          className="mt-8 text-primary-600 hover:text-primary-700 font-medium"
+        >
+          Send another message
+        </button>
+      </div>
+    )
   }
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-8">
-      {submitStatus === 'success' && (
-        <div className="mb-8 p-4 bg-primary-50 border border-primary-200 text-primary-700 rounded-md flex items-start">
-          <CheckCircle className="h-5 w-5 mr-2 mt-0.5 text-primary-500" />
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">Get In Touch</h3>
+          <p className="text-gray-600 text-sm">Fill out the form below and we'll get back to you as soon as possible.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <p className="font-medium">Thank you for your message!</p>
-            <p>We'll be in touch shortly to discuss how we can help you.</p>
+            <label htmlFor="about_first_name" className="block text-sm font-medium text-gray-700 mb-1">
+              First Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="about_first_name"
+              name="first_name"
+              required
+              minLength={2}
+              maxLength={50}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="about_last_name" className="block text-sm font-medium text-gray-700 mb-1">
+              Last Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="about_last_name"
+              name="last_name"
+              required
+              minLength={2}
+              maxLength={50}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="about_email" className="block text-sm font-medium text-gray-700 mb-1">
+              Email Address <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              id="about_email"
+              name="email"
+              required
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="about_phone" className="block text-sm font-medium text-gray-700 mb-1">
+              Phone Number <span className="text-gray-400">(optional)</span>
+            </label>
+            <input
+              type="tel"
+              id="about_phone"
+              name="phone"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="about_company" className="block text-sm font-medium text-gray-700 mb-1">
+              Company <span className="text-gray-400">(optional)</span>
+            </label>
+            <input
+              type="text"
+              id="about_company"
+              name="company"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="about_role" className="block text-sm font-medium text-gray-700 mb-1">
+              Role <span className="text-gray-400">(optional)</span>
+            </label>
+            <input
+              type="text"
+              id="about_role"
+              name="role"
+              className={inputClass}
+            />
           </div>
         </div>
-      )}
 
-      {submitStatus === 'error' && (
-        <div className="mb-8 p-4 bg-red-50 border border-red-200 text-red-700 rounded-md flex items-start">
-          <AlertCircle className="h-5 w-5 mr-2 mt-0.5 text-red-500" />
-          <div>
-            <p className="font-medium">Something went wrong.</p>
-            <p>Please try again or contact us directly at info@agentai.app</p>
-          </div>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="md:col-span-2">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">Get In Touch</h3>
-          <p className="text-gray-600 mb-0">Fill out the form below and we'll get back to you as soon as possible.</p>
-        </div>
-
-        <div className="md:col-span-1">
-          <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">
-            First Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            id="first_name"
-            name="first_name"
-            value={formData.first_name}
-            onChange={handleChange}
-            className={`w-full px-4 py-2 border ${errors.first_name ? 'border-red-500' : 'border-gray-300'} rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm text-gray-900`}
-          />
-          {errors.first_name && (
-            <p className="mt-1 text-sm text-red-600">{errors.first_name}</p>
-          )}
-        </div>
-
-        <div className="md:col-span-1">
-          <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">
-            Last Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            id="last_name"
-            name="last_name"
-            value={formData.last_name}
-            onChange={handleChange}
-            className={`w-full px-4 py-2 border ${errors.last_name ? 'border-red-500' : 'border-gray-300'} rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm text-gray-900`}
-          />
-          {errors.last_name && (
-            <p className="mt-1 text-sm text-red-600">{errors.last_name}</p>
-          )}
-        </div>
-
-        <div className="md:col-span-1">
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email Address <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            className={`w-full px-4 py-2 border ${errors.email ? 'border-red-500' : 'border-gray-300'} rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm text-gray-900`}
-          />
-          {errors.email && (
-            <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-          )}
-        </div>
-
-        <div className="md:col-span-1">
-          <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-            Phone Number <span className="text-gray-500 font-normal">(optional)</span>
-          </label>
-          <input
-            type="tel"
-            id="phone"
-            name="phone"
-            value={formData.phone}
-            onChange={handleChange}
-            className={`w-full px-4 py-2 border ${errors.phone ? 'border-red-500' : 'border-gray-300'} rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm text-gray-900`}
-          />
-          {errors.phone && (
-            <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
-          )}
-        </div>
-
-        <div className="md:col-span-1">
-          <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-1">
-            Company <span className="text-gray-500 font-normal">(optional)</span>
-          </label>
-          <input
-            type="text"
-            id="company"
-            name="company"
-            value={formData.company}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm text-gray-900"
-          />
-        </div>
-
-        <div className="md:col-span-1">
-          <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
-            Role <span className="text-gray-500 font-normal">(optional)</span>
-          </label>
-          <input
-            type="text"
-            id="role"
-            name="role"
-            value={formData.role}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm text-gray-900"
-          />
-        </div>
-
-        <div className="md:col-span-2">
-          <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
+        <div>
+          <label htmlFor="about_message" className="block text-sm font-medium text-gray-700 mb-1">
             Message <span className="text-red-500">*</span>
           </label>
           <textarea
-            id="message"
+            id="about_message"
             name="message"
+            required
+            minLength={10}
+            maxLength={5000}
             rows={4}
-            value={formData.message}
-            onChange={handleChange}
-            className={`w-full px-4 py-2 border ${errors.message ? 'border-red-500' : 'border-gray-300'} rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm text-gray-900`}
             placeholder="How can we help you?"
-          ></textarea>
-          {errors.message && (
-            <p className="mt-1 text-sm text-red-600">{errors.message}</p>
-          )}
+            className={`${inputClass} resize-none`}
+          />
         </div>
 
-        <div className="md:col-span-2">
-          <div className="flex items-start">
-            <div className="flex items-center h-5">
-              <input
-                id="consent"
-                name="consent"
-                type="checkbox"
-                checked={formData.consent}
-                onChange={handleChange}
-                className={`h-4 w-4 text-primary-500 focus:ring-primary-500 border-gray-300 rounded ${errors.consent ? 'border-red-500' : ''}`}
-              />
-            </div>
-            <div className="ml-3 text-sm">
-              <label htmlFor="consent" className="font-medium text-gray-700">
-                I agree to the privacy policy <span className="text-red-500">*</span>
-              </label>
-              <p className="text-gray-500">
-                By submitting this form, you agree to our <Link to="/privacy-policy" className="text-primary-500 hover:underline">privacy policy</Link>.
-              </p>
-              {errors.consent && (
-                <p className="mt-1 text-sm text-red-600">{errors.consent}</p>
-              )}
-            </div>
+        {/* Honeypot */}
+        <div className="absolute left-[-9999px]" aria-hidden="true">
+          <input type="text" name="website_hp" tabIndex={-1} autoComplete="off" />
+        </div>
+
+        {/* Turnstile */}
+        <div ref={turnstileRef} />
+
+        {/* Error Message */}
+        {status === 'error' && (
+          <div className="p-4 bg-red-50 border border-red-100 rounded-lg text-red-600 text-sm">
+            {errorMessage}
           </div>
-        </div>
+        )}
 
-        <div className="md:col-span-2">
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full"
-          >
-            {isSubmitting ? 'Processing...' : 'Submit Inquiry'}
-          </Button>
-          <p className="text-center text-gray-500 text-sm mt-4">
-            Your information is secure and will never be shared with third parties.
-          </p>
-        </div>
+        {/* Submit Button */}
+        <Button
+          type="submit"
+          disabled={status === 'submitting'}
+          className="w-full"
+        >
+          {status === 'submitting' ? 'Sending...' : 'Submit Inquiry'}
+        </Button>
+
+        {/* Privacy notice */}
+        <p className="flex items-center justify-center gap-1.5 text-xs text-gray-500 text-center">
+          <svg className="w-3.5 h-3.5 text-primary-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+          </svg>
+          Secure form. By submitting, you agree to our{' '}
+          <Link to="/privacy-policy" className="text-primary-600 hover:underline">
+            privacy policy
+          </Link>
+        </p>
       </form>
     </div>
   )

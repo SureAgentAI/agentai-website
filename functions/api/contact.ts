@@ -27,7 +27,7 @@ interface ContactRequest {
   company?: string
   message: string
   'cf-turnstile-response'?: string
-  template?: 'contact' | 'demo'
+  template?: 'contact' | 'demo' | 'about'
   // Demo-specific fields
   role?: string
   monthly_claims?: string
@@ -111,13 +111,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     }
 
     const isDemo = template === 'demo'
+    const isAbout = template === 'about'
     const subject = isDemo
       ? `Demo Request: ${name}`
-      : `New Contact: ${name}`
+      : isAbout
+        ? `About Page Inquiry: ${name}`
+        : `New Contact: ${name}`
 
     const htmlBody = isDemo
       ? buildDemoEmailHtml(data, meta)
-      : buildContactEmailHtml(data, meta)
+      : buildContactEmailHtml(data, meta, isAbout)
 
     // Send email via Resend
     const emailResponse = await fetch('https://api.resend.com/emails', {
@@ -236,8 +239,9 @@ function buildMetaSection(meta?: ContactMeta): string {
   `
 }
 
-function buildContactEmailHtml(data: ContactRequest, meta?: ContactMeta): string {
+function buildContactEmailHtml(data: ContactRequest, meta?: ContactMeta, isAbout?: boolean): string {
   const initials = data.name.split(' ').map(n => n.charAt(0).toUpperCase()).join('').slice(0, 2)
+  const title = isAbout ? 'About Page Inquiry' : 'New Contact Inquiry'
 
   return `
 <!DOCTYPE html>
@@ -245,7 +249,7 @@ function buildContactEmailHtml(data: ContactRequest, meta?: ContactMeta): string
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>New Contact Form Submission</title>
+  <title>${title}</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f1f5f9;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
   <div style="max-width:600px;margin:0 auto;padding:32px 16px;">
@@ -258,7 +262,7 @@ function buildContactEmailHtml(data: ContactRequest, meta?: ContactMeta): string
     <div style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
       <!-- Header Bar -->
       <div style="background:linear-gradient(135deg,#6366f1 0%,#4f46e5 100%);padding:20px 24px;">
-        <h1 style="margin:0;font-size:18px;color:#ffffff;font-weight:600;">New Contact Inquiry</h1>
+        <h1 style="margin:0;font-size:18px;color:#ffffff;font-weight:600;">${title}</h1>
       </div>
 
       <!-- Content -->
@@ -271,6 +275,7 @@ function buildContactEmailHtml(data: ContactRequest, meta?: ContactMeta): string
           <div>
             <div style="font-size:16px;font-weight:600;color:#1e293b;">${escapeHtml(data.name)}</div>
             <div style="font-size:14px;color:#64748b;">${data.company ? escapeHtml(data.company) : 'No company specified'}</div>
+            ${data.role ? `<div style="font-size:12px;color:#6366f1;margin-top:2px;">${escapeHtml(data.role)}</div>` : ''}
           </div>
         </div>
 
