@@ -13,10 +13,10 @@ import Button from '../components/ui/Button'
 
 export default function Partner() {
   return (
-    <>
+    <main>
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-white via-primary-50 to-primary-100 py-20">
-        <div className="container mx-auto px-6">
+        <div className="container-site">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight mb-6">
               Join the Future of <span className="gradient-text">Medical Billing</span>
@@ -33,7 +33,7 @@ export default function Partner() {
 
       {/* Why Partner with AgentAI Section */}
       <section className="py-10 bg-white">
-        <div className="container mx-auto px-6">
+        <div className="container-site">
           <div className="max-w-4xl mx-auto text-center mb-6">
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
               Why Partner with AgentAI?
@@ -132,7 +132,7 @@ export default function Partner() {
 
       {/* Case Study Section */}
       <section className="py-10 bg-white">
-        <div className="container mx-auto px-6">
+        <div className="container-site">
           <div className="max-w-6xl mx-auto">
             {/* Case Study Header */}
             <div className="text-center mb-8">
@@ -275,9 +275,9 @@ export default function Partner() {
 
       {/* CTA Section */}
       <section className="py-20 bg-gray-50">
-        <div className="container mx-auto px-6">
+        <div className="container-site">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-light text-gray-900 mb-6">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
               Ready to Transform Your Business?
             </h2>
             <p className="text-xl text-gray-600 mb-8">
@@ -300,6 +300,6 @@ export default function Partner() {
           </div>
         </div>
       </section>
-    </>
+    </main>
   )
 }

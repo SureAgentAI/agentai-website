@@ -59,14 +59,14 @@ export default function Header() {
         {/* Mobile Nav */}
         {isOpen && (
           <div className="lg:hidden border-t border-gray-100 bg-white">
-            <div className="px-2 pt-2 pb-3 space-y-1">
+            <div className="px-4 pt-4 pb-6 space-y-2">
               {navLinks.map(link => (
                 <Link
                   key={link.href}
                   to={link.href}
-                  className={`block px-3 py-2 text-base font-medium rounded-md transition-colors ${
+                  className={`block px-3 py-2.5 text-base font-medium rounded-lg transition-colors ${
                     location.pathname === link.href
-                      ? 'text-primary-500 bg-gray-50'
+                      ? 'text-primary-500 bg-primary-50'
                       : 'text-gray-700 hover:text-primary-500 hover:bg-gray-50'
                   }`}
                   onClick={() => setIsOpen(false)}
@@ -74,13 +74,15 @@ export default function Header() {
                   {link.label}
                 </Link>
               ))}
-              <Link
-                to="/demo"
-                className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-primary-500 hover:bg-gray-50 rounded-md transition-colors"
-                onClick={() => setIsOpen(false)}
-              >
-                Schedule Demo
-              </Link>
+              <div className="pt-2">
+                <Link
+                  to="/demo"
+                  className="block w-full px-4 py-3 text-center text-base font-medium text-white bg-primary-500 hover:bg-primary-600 rounded-lg transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Schedule Demo
+                </Link>
+              </div>
             </div>
           </div>
         )}

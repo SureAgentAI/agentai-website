@@ -79,7 +79,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-12">
             {[
               {
                 icon: Building2,
@@ -177,12 +177,11 @@ export default function Home() {
                 </div>
               ))}
             </div>
-            <Link
-              to="/product"
-              className="inline-flex items-center px-8 py-4 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-primary-500 hover:text-white hover:border-primary-500 transition-colors"
-            >
-              Explore Our Platform Features
-              <ArrowRight className="w-5 h-5 ml-2" />
+            <Link to="/product">
+              <Button variant="secondary" size="lg">
+                Explore Our Platform Features
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
             </Link>
           </div>
         </div>
@@ -218,7 +217,7 @@ export default function Home() {
       <section className="py-20 bg-gray-50">
         <div className="container-site">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-light text-gray-900 mb-6">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
               Experience the Future of Medical Billing
             </h2>
             <p className="text-xl text-gray-600 mb-8">

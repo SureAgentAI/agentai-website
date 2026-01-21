@@ -6,10 +6,10 @@ import { useTurnstile } from '../hooks/useTurnstile'
 
 // Investor accent colors using Tailwind theme colors
 const investorColors = {
-  transformationCapital: 'bg-amber-500/10',
-  eirPartners: 'bg-sky-400/10',
-  slowVentures: 'bg-gray-100',
-  oceans: 'bg-slate-800'
+  transformationCapital: 'from-amber-50 to-white',
+  eirPartners: 'from-sky-50 to-white',
+  slowVentures: 'from-gray-50 to-white',
+  oceans: 'from-indigo-50 to-white'
 }
 
 const team = [
@@ -266,7 +266,7 @@ export default function About() {
     <main>
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-white via-primary-50 to-primary-100 py-20">
-        <div className="container mx-auto px-6">
+        <div className="container-site">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight mb-6">
               Transforming <span className="gradient-text">Healthcare</span> with AI
@@ -283,7 +283,7 @@ export default function About() {
 
       {/* Mission & Vision */}
       <div className="py-10">
-        <div className="container mx-auto px-6">
+        <div className="container-site">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl lg:text-4xl text-center font-bold text-gray-900 mb-6">Building the Future of Medical Billing</h2>
 
@@ -335,13 +335,13 @@ export default function About() {
 
       {/* Leadership Team */}
       <div className="bg-gray-50 py-10">
-        <div className="container mx-auto px-6">
+        <div className="container-site">
           <h2 className="text-3xl lg:text-4xl text-center font-bold text-gray-900 mb-4">Leadership Team</h2>
           <p className="text-lg text-center text-gray-600 mb-8">
             Bringing together expertise in technology, healthcare, and business transformation
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-12 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
             {team.map((member) => (
               <div key={member.name} className="bg-white rounded-lg shadow-sm p-6 text-center">
                 <div className="mb-6">
@@ -365,7 +365,7 @@ export default function About() {
 
       {/* Investors & Advisors */}
       <div className="bg-white py-10">
-        <div className="container mx-auto px-6">
+        <div className="container-site">
           <h2 className="text-3xl lg:text-4xl text-center font-bold text-gray-900 mb-10">Backed by Industry Leaders</h2>
 
           <div className="max-w-5xl mx-auto">
@@ -403,14 +403,14 @@ export default function About() {
                 <p className="text-gray-600">Early-stage venture capital firm with deep expertise in consumer, fintech, SaaS, and healthcare sectors.</p>
               </div>
 
-              <div className={`${investorColors.oceans} rounded-lg p-6 text-center shadow-lg`}>
+              <div className={`bg-gradient-to-br ${investorColors.oceans} rounded-lg p-6 text-center border shadow-md`}>
                 <img
                   src="/images/external/oceans.png"
                   alt="Oceans"
                   className="h-12 mx-auto mb-4"
                 />
-                <div className="text-xl font-semibold text-white mb-2">Oceans</div>
-                <p className="text-gray-200">NYC-based early-stage VC firm leading pre-seed and seed deals with hands-on venture coaching.</p>
+                <div className="text-xl font-semibold text-gray-800 mb-2">Oceans</div>
+                <p className="text-gray-600">NYC-based early-stage VC firm leading pre-seed and seed deals with hands-on venture coaching.</p>
               </div>
             </div>
           </div>
@@ -419,7 +419,7 @@ export default function About() {
 
       {/* Strategic Advisors */}
       <div className="bg-gray-50 py-10">
-        <div className="container mx-auto px-6">
+        <div className="container-site">
           <h3 className="text-3xl lg:text-4xl text-center font-bold text-gray-900 mb-8">Strategic Advisors</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             <div className="bg-white rounded-lg shadow-md p-5 text-center border border-gray-100">
@@ -481,7 +481,7 @@ export default function About() {
 
       {/* Contact Section */}
       <div className="py-10 bg-white">
-        <div className="container mx-auto px-6">
+        <div className="container-site">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 max-w-6xl mx-auto">
             {/* Contact Information */}
 
@@ -532,7 +532,7 @@ export default function About() {
 
       {/* CTA Section */}
       <section className="py-20 bg-gray-50">
-        <div className="container mx-auto px-6">
+        <div className="container-site">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
               Want to Learn More?

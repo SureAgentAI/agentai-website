@@ -123,7 +123,7 @@ export default function Product() {
           </div>
 
           {/* Feature Grid */}
-          <div className="grid lg:grid-cols-3 gap-2 md:gap-8 mb-10">
+          <div className="grid lg:grid-cols-3 gap-6 md:gap-8 mb-10">
             {[
               {
                 icon: Zap,
@@ -295,7 +295,7 @@ export default function Product() {
       <section className="py-20 bg-white">
         <div className="container-site">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-light text-gray-900 mb-6">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
               Ready to Transform Your Revenue Cycle?
             </h2>
             <p className="text-xl text-gray-600 mb-8">
@@ -309,9 +309,9 @@ export default function Product() {
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
-              <Link to="/">
+              <Link to="/contact">
                 <Button variant="secondary" size="lg">
-                  Back to Home
+                  Contact Us
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
