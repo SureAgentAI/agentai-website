@@ -2,30 +2,33 @@ import { Link } from 'react-router-dom'
 
 export default function Footer() {
   return (
-    <footer className="bg-white border-t border-gray-200">
-      <div className="container-site py-12">
+    <footer className="bg-white">
+      <div className="container-site py-16">
+        {/* Top border */}
+        <div className="border-t border-gray-200"></div>
+
         {/* Main grid - 4 columns on desktop */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mt-8">
           {/* Brand */}
-          <div className="lg:col-span-1">
-            <Link to="/" className="inline-block mb-4">
+          <div>
+            <Link to="/" className="block mb-4">
               <img
                 src="/images/assets/logo.png"
                 alt="AgentAI"
                 className="h-10 w-auto"
               />
             </Link>
-            <p className="text-gray-600 text-sm leading-relaxed mb-4">
+            <p className="text-gray-600 text-sm leading-relaxed mb-3">
               Revolutionizing Medical Billing with the Power of AI
             </p>
             <a
               href="https://www.linkedin.com/company/agentaiapp"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center w-9 h-9 bg-gray-100 rounded-full text-gray-500 hover:bg-primary-500 hover:text-white transition-all duration-200"
+              className="inline-block text-gray-400 hover:text-primary-500 transition-colors"
               aria-label="Follow us on LinkedIn"
             >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.047-1.852-3.047-1.853 0-2.136 1.445-2.136 2.939v5.677H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
               </svg>
             </a>
@@ -36,7 +39,7 @@ export default function Footer() {
             <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase mb-4">
               Solutions
             </h3>
-            <ul className="space-y-3">
+            <ul className="space-y-2">
               <li>
                 <Link
                   to="/"
@@ -61,7 +64,7 @@ export default function Footer() {
             <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase mb-4">
               Company
             </h3>
-            <ul className="space-y-3">
+            <ul className="space-y-2">
               <li>
                 <Link
                   to="/partner"
@@ -76,14 +79,6 @@ export default function Footer() {
                   className="text-gray-600 hover:text-primary-500 transition-colors text-sm"
                 >
                   About
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/press"
-                  className="text-gray-600 hover:text-primary-500 transition-colors text-sm"
-                >
-                  Press
                 </Link>
               </li>
             </ul>
@@ -116,10 +111,9 @@ export default function Footer() {
         </div>
 
         {/* Copyright */}
-        <div className="mt-10 pt-6 border-t border-gray-200">
+        <div className="mt-8 pt-6 border-t border-gray-200">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-sm text-gray-500">
             <p>© {new Date().getFullYear()} AgentAI, Inc. All rights reserved.</p>
-            <span className="hidden sm:inline">·</span>
             <Link
               to="/privacy-policy"
               className="hover:text-primary-500 transition-colors"
