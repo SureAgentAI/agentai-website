@@ -3,12 +3,9 @@ import { Link } from 'react-router-dom'
 export default function Footer() {
   return (
     <footer className="bg-white">
-      <div className="container-site py-16">
-        {/* Top border */}
-        <div className="border-t border-gray-200"></div>
-
+      <div className="container-site pt-16 pb-8">
         {/* Main grid - 4 columns on desktop */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* Brand */}
           <div>
             <Link to="/" className="block mb-4">
@@ -111,7 +108,7 @@ export default function Footer() {
         </div>
 
         {/* Copyright */}
-        <div className="mt-8 pt-6 border-t border-gray-200">
+        <div className="mt-12 pt-8 pb-4 border-t border-gray-200">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-sm text-gray-500">
             <p>© {new Date().getFullYear()} AgentAI, Inc. All rights reserved.</p>
             <Link
