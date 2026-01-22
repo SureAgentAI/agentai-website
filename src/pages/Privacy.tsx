@@ -174,8 +174,8 @@ export default function Privacy() {
             <p>
               <strong>AgentAI, Inc.</strong><br />
               Email:{' '}
-              <a href="mailto:privacy@agentai.com" className="text-primary-600 hover:text-primary-700">
-                privacy@agentai.com
+              <a href="mailto:privacy@agentai.app" className="text-primary-600 hover:text-primary-700">
+                privacy@agentai.app
               </a><br />
               Phone: 1-310-439-8842<br />
               Address: 21255 Burbank Blvd, Suite 120, Woodland Hills, CA 91367
